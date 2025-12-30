@@ -5,16 +5,13 @@
 #include <pthread.h>
 #include "sound_tracks.h"
 
-/* Sound request shared with audio thread */
-#define SOUND_QUEUE_SIZE 32
+#define SOUND_QUEUE_SIZE 5
 
 typedef struct {
     float freq;
     float dur;
 } Sound;
 
-
-/* Public API */
 void InitSound(void);
 void PlayBeep(TrackType type);
 void TerminateSound(void);

@@ -7,11 +7,10 @@
 void BallLogic(int width, int height, Ball* ball, Palette* player, Palette* ai_player)
 {
     // Top and bottom edge collision
-    if (ball->y + ball->vel_y < 0 || ball->y - height > 0)
+    if (ball->y <= 0 || ball->y + ball->vel_y - height >= 0)
     {
         ball->vel_y *= -1;
-        TrackType trck = BEEP;
-        PlayBeep(trck);
+        PlayBeep(BEEP);
     }
 
     // Right and left edge collision
@@ -20,14 +19,12 @@ void BallLogic(int width, int height, Ball* ball, Palette* player, Palette* ai_p
         if (ball->x < 0)
         {
             ++ai_player->score;
-            TrackType trck = ENEMY_GOAL;
-            PlayBeep(trck);
+            PlayBeep(ENEMY_GOAL);
         }
         if (ball->x - width > 0)
         {
             ++player->score;
-            TrackType trck = PLAYER_GOAL;;
-            PlayBeep(trck);
+            PlayBeep(PLAYER_GOAL);
         }
         
         InitBall(width, height);
@@ -43,8 +40,7 @@ void BallLogic(int width, int height, Ball* ball, Palette* player, Palette* ai_p
         ((ball->y-BALL_H) + ball->vel_y) < player->y + PADDLE_H*SCALING_VALUE &&
         ((ball->y+BALL_H) + ball->vel_y) > player->y){
             
-            TrackType trck = BEEP;
-            PlayBeep(trck);
+            PlayBeep(BEEP);
             int diff = ball->y - (player->y + PADDLE_H*2);
             float perc = (float)diff/(PADDLE_H*2);
             ball->vel_y = perc*ball->speed;
@@ -57,8 +53,7 @@ void BallLogic(int width, int height, Ball* ball, Palette* player, Palette* ai_p
         ((ball->y+BALL_H) + ball->vel_y) < ai_player->y + PADDLE_H*SCALING_VALUE &&
         ((ball->y+BALL_H) + ball->vel_y) > ai_player->y){
 
-            TrackType trck = BEEP;
-            PlayBeep(trck);
+            PlayBeep(BEEP);
             int diff = ball->y - (ai_player->y + PADDLE_H*2);
             float perc = (float)diff/(PADDLE_H*2);
             ball->vel_y = perc*ball->speed;

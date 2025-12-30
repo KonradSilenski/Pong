@@ -22,6 +22,7 @@ static int queue_count = 0;
 
 static bool audio_running = true;
 
+BYTE* data;
 static IAudioClient* audioClient = NULL;
 static IAudioRenderClient* renderClient = NULL;
 static WAVEFORMATEX* waveFormat = NULL;
@@ -79,6 +80,14 @@ static int audio_init(void)
     IMMDeviceEnumerator_Release(enumerator);
     IMMDevice_Release(device);
 
+    IAudioRenderClient_GetBuffer(renderClient, bufferFrameCount, &data);
+    IAudioRenderClient_ReleaseBuffer(
+    renderClient,
+    bufferFrameCount,
+    AUDCLNT_BUFFERFLAGS_SILENT);
+
+    IAudioClient_Start(audioClient);
+
     return 0;
 }
 
@@ -105,21 +114,18 @@ static void audio_shutdown(void)
     }
 }
 
-static void play_tone(double frequency, double duration)
+static void play_sound_queue(void)
 {
-    BYTE* data;
     UINT32 padding;
     UINT32 framesToWrite;
-    double sampleRate = waveFormat->nSamplesPerSec;
-    UINT32 totalFrames = (UINT32)(duration * sampleRate);
-    UINT32 frameIndex = 0;
 
-    IAudioRenderClient_GetBuffer(renderClient, bufferFrameCount, &data);
-    IAudioRenderClient_ReleaseBuffer(renderClient, bufferFrameCount, 0);
+    const double sampleRate = waveFormat->nSamplesPerSec;
 
-    IAudioClient_Start(audioClient);
+    Sound current = {0};
+    UINT32 currentFrame = 0;
+    UINT32 totalFrames = 0;
 
-    while (frameIndex < totalFrames && audio_running)
+    while (audio_running)
     {
         WaitForSingleObject(audioEvent, INFINITE);
 
@@ -128,33 +134,59 @@ static void play_tone(double frequency, double duration)
         if (framesToWrite == 0)
             continue;
 
-        if (framesToWrite > totalFrames - frameIndex)
-            framesToWrite = totalFrames - frameIndex;
-
-        IAudioRenderClient_GetBuffer(
-            renderClient,
-            framesToWrite,
-            &data);
-
+        IAudioRenderClient_GetBuffer(renderClient, framesToWrite, &data);
         float* samples = (float*)data;
-        for (UINT32 i = 0; i < framesToWrite; i++)
-        {
-            double t = (frameIndex + i) / sampleRate;
-            float s = (float)sin(2.0 * 3.141592653589 * frequency * t);
 
-            for (UINT32 ch = 0; ch < waveFormat->nChannels; ch++)
-                *samples++ = s;
+        UINT32 framesWritten = 0;
+
+        while (framesWritten < framesToWrite && audio_running)
+        {
+            
+            if (currentFrame >= totalFrames)
+            {
+                pthread_mutex_lock(&sound_mutex);
+
+                if (queue_count == 0)
+                {
+                    pthread_mutex_unlock(&sound_mutex);
+                    break;
+                }
+
+                current = sound_queue[queue_head];
+                queue_head = (queue_head + 1) % SOUND_QUEUE_SIZE;
+                queue_count--;
+
+                pthread_mutex_unlock(&sound_mutex);
+
+                currentFrame = 0;
+                totalFrames = (UINT32)(current.dur * sampleRate);
+            }
+
+            UINT32 framesLeftInSound = totalFrames - currentFrame;
+            UINT32 framesNow =
+                (framesToWrite - framesWritten < framesLeftInSound)
+                ? framesToWrite - framesWritten
+                : framesLeftInSound;
+
+            for (UINT32 i = 0; i < framesNow; i++)
+            {
+                double t = (currentFrame + i) / sampleRate;
+                float s = (float)sin(2.0 * 3.141592653589 *
+                                     current.freq * t);
+
+                for (UINT32 ch = 0; ch < waveFormat->nChannels; ch++)
+                    *samples++ = s;
+            }
+
+            currentFrame += framesNow;
+            framesWritten += framesNow;
         }
 
-        IAudioRenderClient_ReleaseBuffer(
-            renderClient,
-            framesToWrite,
-            0);
+        IAudioRenderClient_ReleaseBuffer(renderClient, framesWritten, 0);
 
-        frameIndex += framesToWrite;
+        if (queue_count == 0 && currentFrame >= totalFrames)
+            break;
     }
-    
-    IAudioClient_Stop(audioClient);
 }
 
 static void* RunAudio(void* arg)
@@ -165,32 +197,25 @@ static void* RunAudio(void* arg)
     audio_init();
 
     while (audio_running)
-{
-    pthread_mutex_lock(&sound_mutex);
-
-    while (queue_count == 0 && audio_running)
-        pthread_cond_wait(&sound_cond, &sound_mutex);
-
-    if (!audio_running)
     {
+        pthread_mutex_lock(&sound_mutex);
+
+        while (queue_count == 0 && audio_running)
+            pthread_cond_wait(&sound_cond, &sound_mutex);
+
         pthread_mutex_unlock(&sound_mutex);
-        break;
+
+        if (!audio_running)
+            break;
+
+        play_sound_queue();
     }
-
-    Sound s = sound_queue[queue_head];
-    //printf("Freq: %f Dur: %f \n", sound_queue[queue_head].freq, sound_queue[queue_head].dur);
-    queue_head = (queue_head + 1) % SOUND_QUEUE_SIZE;
-    queue_count--;
-    pthread_mutex_unlock(&sound_mutex);
-
-    play_tone(s.freq, s.dur);
-}
-
 
     audio_shutdown();
     CoUninitialize();
     return NULL;
 }
+
 
 void InitSound(void)
 {
@@ -200,7 +225,7 @@ void InitSound(void)
 void PlayBeep(TrackType type)
 {
     pthread_mutex_lock(&sound_mutex);
-    memset(&sound_queue, 0, sizeof(Sound));
+    TrackType trck = type;
 
     if (queue_count < SOUND_QUEUE_SIZE)
     {
@@ -228,10 +253,13 @@ void PlayBeep(TrackType type)
             } break;
             case BEEP:
             {
-                sound_queue[queue_tail].freq = contact[0][0];
-                sound_queue[queue_tail].dur  = contact[1][0];
+                for (int i = 0; i < BEEP_L && queue_count < SOUND_QUEUE_SIZE; ++i)
+                {
+                sound_queue[queue_tail].freq = contact[0][i];
+                sound_queue[queue_tail].dur  = contact[1][i];
                 queue_tail = (queue_tail + 1) % SOUND_QUEUE_SIZE;
                 queue_count++;
+                }
             } break;
         }
 
@@ -240,12 +268,11 @@ void PlayBeep(TrackType type)
     pthread_mutex_unlock(&sound_mutex);
 }
 
-
-
 void TerminateSound(void)
 {
     pthread_mutex_lock(&sound_mutex);
     audio_running = false;
+    IAudioClient_Stop(audioClient);
     pthread_cond_signal(&sound_cond);
     pthread_mutex_unlock(&sound_mutex);
 
