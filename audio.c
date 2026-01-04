@@ -226,6 +226,11 @@ void PlayBeep(TrackType type)
 {
     pthread_mutex_lock(&sound_mutex);
 
+    sound_queue[SOUND_QUEUE_SIZE];
+    queue_head = 0;
+    queue_tail = 0;
+    queue_count = 0;
+
     if (queue_count < SOUND_QUEUE_SIZE)
     {
         switch(type)
