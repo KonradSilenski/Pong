@@ -31,6 +31,10 @@ void draw_ball(
     uint32_t color
 );
 
+/*
+    Draws a single digit bitmap at specified coordinates.
+    Uses SCALING_VALUE to scale the bitmap and centers the image.
+*/
 void draw_digit(
     uint32_t *pixels,
     int width,
@@ -41,6 +45,10 @@ void draw_digit(
     uint32_t color
 );
 
+/*
+    Draws an entire number using mutiple calls to draw_digit
+    at specified coordinates.
+*/
 void draw_number(
     uint32_t *pixels,
     int width,
@@ -51,6 +59,9 @@ void draw_number(
     uint32_t color
 );
 
+/*
+    Draws the net at specified coordinates.
+*/
 void DrawNet(
     uint32_t *pixels,
     int width,

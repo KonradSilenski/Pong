@@ -5,11 +5,11 @@
 #include <stdbool.h>
 
 typedef struct {
-    int x;
-    int y;
     float accel;
     float decel;
     float vel_y;
+    int x;
+    int y;
     int moving_y;
     int speed;
     int max_speed;
@@ -17,13 +17,13 @@ typedef struct {
 } Palette;
 
 typedef struct {
-    int x;
-    int y;
     float vel_x;
     float vel_y;
-    bool restart;
+    int x;
+    int y;
     int restart_tick;
     int speed;
+    bool restart;
 } Ball;
 
 extern Palette player_dat;

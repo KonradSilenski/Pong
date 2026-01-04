@@ -17,6 +17,7 @@ static const uint8_t ball_btmp[BALL_H] =
     0x3
 };
 
+// 0-9 digit bitmaps
 static const uint8_t digit_font[10][FONT_H] = {
     // 0
     { 0x0E, 0x11, 0x19, 0x15, 0x13, 0x11, 0x0E },

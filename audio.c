@@ -225,7 +225,6 @@ void InitSound(void)
 void PlayBeep(TrackType type)
 {
     pthread_mutex_lock(&sound_mutex);
-    TrackType trck = type;
 
     if (queue_count < SOUND_QUEUE_SIZE)
     {

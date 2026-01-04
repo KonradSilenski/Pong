@@ -9,6 +9,7 @@
 
 void PlayerControls (Palette* player, int wnd_height)
 {
+    // Reset movement values on each new frame
     player->accel      = PLAYER_ACCEL;
     player->decel      = PLAYER_DECEL;
     player->moving_y   = 0;

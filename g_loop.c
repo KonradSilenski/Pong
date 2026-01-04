@@ -13,8 +13,9 @@ void PongLoop (void)
     loop_dat.loops = 0;
     while (GetTickCount() > loop_dat.next_game_tick && loop_dat.loops < loop_dat.max_frameskip)
     {
+        // Only run game logic if the restart timer is not running.
         if (!pause){
-            // Only check for player input if the restart timer is not running.
+            // Check for player input and perform movement calculations.
             if (!ball_dat.restart) PlayerControls(&player_dat, 480);
             // Perform in game object logic.
             BallLogic(FRAME_WIDTH, FRAME_HEIGHT, &ball_dat, &player_dat, &enemy_dat);

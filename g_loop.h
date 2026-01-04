@@ -6,12 +6,12 @@
 #include "config.h"
 
 typedef struct {
+    DWORD next_game_tick;
     int ticks_per_second;
     int skip_ticks;
     int max_frameskip;
     int tick;
     int loops;
-    DWORD next_game_tick;
 } Loop_Data;
 
 extern Loop_Data loop_dat;

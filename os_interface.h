@@ -40,8 +40,8 @@ typedef struct {
         bool quit;
     } win32;
     struct {
-        int width, height;
         uint32_t *pixels;
+        int width, height;
         bool has_been_set;
     } frame_buffer;
 } Sys_dat;
